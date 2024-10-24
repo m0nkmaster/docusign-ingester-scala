@@ -1,0 +1,1 @@
+case class IngestRequest(field1: String, pdfBlob: Array[Byte])
