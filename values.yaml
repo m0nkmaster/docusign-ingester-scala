@@ -1,0 +1,7 @@
+replicas: 3
+image:
+  repository: m0nkmaster/docusign-ingester
+  tag: "latest"
+service:
+  type: ClusterIP
+  port: 8080
