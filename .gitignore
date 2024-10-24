@@ -1,5 +1,44 @@
+# OS generated files
+.DS_Store
+
+# Scala specific
 *.class
 *.log
+.bsp/
+.metals/
+.bloop/
+project/.bloop/
+target/
+lib_managed/
+src_managed/
+project/boot/
+project/plugins/project/
+.scala-build/
 
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
-hs_err_pid*
+# SBT specific
+dist/*
+target/
+lib_managed/
+src_managed/
+project/boot/
+project/plugins/project/
+.history
+.cache
+.lib/
+
+# IDE specific
+.idea/
+.idea_modules/
+.vscode/
+.metals/
+*.iml
+*.iws
+*.ipr
+
+# Build tools
+.sbt-local
+
+# Metals
+.metals/
+.bloop/
+metals.sbt
