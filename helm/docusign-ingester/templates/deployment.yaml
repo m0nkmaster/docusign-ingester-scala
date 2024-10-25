@@ -1,13 +1,27 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Release.Name }}-docusign-ingester
+  name: docusign-ingester
+  namespace: docusign
 spec:
-  replicas: {{ .Values.replicas }}
+  replicas: 2
+  selector:
+    matchLabels:
+      app: docusign-ingester
   template:
+    metadata:
+      labels:
+        app: docusign-ingester
     spec:
       containers:
-        - name: docusign-ingester
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-          ports:
-            - containerPort: 8080
+      - name: docusign-ingester
+        image: 868232756949.dkr.ecr.eu-west-2.amazonaws.com/docusign-ingester:latest
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
