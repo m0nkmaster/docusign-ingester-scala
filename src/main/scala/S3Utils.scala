@@ -7,10 +7,11 @@ object S3Utils {
   val client: S3Client = S3Client.builder().build()
 
   def saveToS3(pdfBlob: Array[Byte], key: String): IO[Unit] = IO {
-    val request = PutObjectRequest.builder()
-      .bucket("your-s3-bucket-name")
-      .key(key)
-      .build()
+  val request = PutObjectRequest.builder()
+    .bucket("docusign-pdfs-databonds")
+    .key(key)
+    .build()
+
 
     // You may want to write the blob to a temporary file, or use streams depending on the size
     // This example assumes you have saved the blob to a path
