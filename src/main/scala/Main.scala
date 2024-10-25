@@ -1,5 +1,8 @@
 import org.http4s.server.blaze._
-import cats.effect.IOApp
+import cats.effect.{IO, IOApp}
+import org.http4s.blaze.server.BlazeServerBuilder
+import scala.concurrent.ExecutionContext.global
+
 
 object Main extends IOApp.Simple {
   def run: IO[Unit] = {
