@@ -42,3 +42,6 @@ project/plugins/project/
 .metals/
 .bloop/
 metals.sbt
+
+# Environment variables
+.env
