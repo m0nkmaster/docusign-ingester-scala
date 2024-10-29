@@ -27,10 +27,21 @@ object Ingester {
         _ <- IO.pure(())
         body <- req.bodyText.compile.string
         _ = logger.info(s"Raw request body length: ${body.length}")
-        _ = logger.info(s"Document count in payload: ${body.split("PDFBytes").length - 1}")
+        _ = logger.info(
+          s"Document count in payload: ${body.split("PDFBytes").length - 1}"
+        )
         _ = logger.info(
           s"Has envelopeDocuments: ${body.contains("envelopeDocuments")}"
         )
+
+        _ = {
+          logger.info("=== DOCUSIGN PAYLOAD START ===")
+          body.grouped(4000).zipWithIndex.foreach { case (chunk, index) =>
+            logger.info(s"CHUNK $index: $chunk")
+          }
+          logger.info("=== DOCUSIGN PAYLOAD END ===")
+        }
+        
         webhookData <- req.as[DocuSignWebhook]
         _ = logger.info(
           s"Parsed webhook data - EnvelopeId: ${webhookData.data.envelopeId}"
