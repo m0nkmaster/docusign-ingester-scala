@@ -24,9 +24,15 @@ object Ingester {
     case req @ POST -> Root / "ingest" =>
       logger.info("Received POST request to /ingest")
       (for {
+        _ <- IO.pure(()) // Send implicit 100-continue response
         body <- req.bodyText.compile.string
-        _ = logger.info(s"Raw request body: $body")
-        _ = logger.info(s"Request headers: ${req.headers}")
+        _ = logger.info(s"Raw request body length: ${body.length}")
+        _ =
+          if (body.length < 1000) logger.info(s"Raw request body: $body")
+          else
+            logger.info(
+              s"Request body too large to log fully. First 1000 chars: ${body.take(1000)}"
+            )
         webhookData <- req.as[DocuSignWebhook]
         _ = logger.info(
           s"Parsed webhook data - EnvelopeId: ${webhookData.data.envelopeId}"
@@ -64,4 +70,3 @@ object Ingester {
     s"$field1-${System.currentTimeMillis}.pdf"
   }
 }
-
