@@ -50,10 +50,21 @@ object Ingester {
                   )
                   Ok(webhookData)
                 case Left(error) =>
-                  logger.error("Error saving to S3", error)
-                  InternalServerError(
-                    Json.obj("error" -> Json.fromString(error.getMessage))
+                  logger.error(
+                    s"Error parsing webhook data: ${error.getMessage}",
+                    error
                   )
+                  logger.error(s"Error details: ${error.getClass.getName}")
+                  logger.error(
+                    s"Stack trace: ${error.getStackTrace.mkString("\n")}"
+                  )
+                  BadRequest(
+                    Json.obj(
+                      "error" -> Json.fromString(error.getMessage),
+                      "errorType" -> Json.fromString(error.getClass.getName)
+                    )
+                  )
+
               }
 
             case Left(error) =>
