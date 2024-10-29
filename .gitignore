@@ -48,3 +48,4 @@ metals.sbt
 
 # Terraform
 .terraform/infrastructure/.terraform
+infrastructure/.terraform
