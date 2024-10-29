@@ -50,3 +50,4 @@ metals.sbt
 infrastructure/.terraform
 infrastructure/.terraform/
 infrastructure/.terraform.lock.hcl
+misc/
