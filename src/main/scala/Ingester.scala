@@ -11,6 +11,9 @@ import org.http4s.EntityEncoder
 import org.http4s.circe.jsonEncoderOf
 import models._
 import org.slf4j.LoggerFactory
+import fs2.Stream
+import io.circe.parser.decode
+import fs2.text
 
 object Ingester {
   private val logger = LoggerFactory.getLogger(this.getClass)
@@ -23,47 +26,43 @@ object Ingester {
   val routes = HttpRoutes.of[IO] {
     case req @ POST -> Root / "ingest" =>
       logger.info("Received POST request to /ingest")
-      (for {
-        _ <- IO.pure(())
-        body <- req.bodyText.compile.string
-        _ = logger.info(s"Raw request body length: ${body.length}")
-        _ = logger.info(
-          s"Document count in payload: ${body.split("PDFBytes").length - 1}"
-        )
-        _ = logger.info(
-          s"Has envelopeDocuments: ${body.contains("envelopeDocuments")}"
-        )
 
-        _ = {
-          logger.info("=== DOCUSIGN PAYLOAD START ===")
-          body.grouped(4000).zipWithIndex.foreach { case (chunk, index) =>
-            logger.info(s"CHUNK $index: $chunk")
+      req.body
+        .through(text.utf8.decode)
+        .compile
+        .string
+        .flatMap { body =>
+          decode[DocuSignWebhook](body) match {
+            case Right(webhookData) =>
+              logger.info(
+                s"Successfully parsed webhook data - EnvelopeId: ${webhookData.data.envelopeId}"
+              )
+              val pdfBytesBase64 =
+                webhookData.data.envelopeSummary.envelopeDocuments.head.PDFBytes
+              val pdfBytes = java.util.Base64.getDecoder.decode(pdfBytesBase64)
+              val s3Key = generateS3Key(webhookData.data.envelopeId)
+              logger.info(s"Generated S3 key: $s3Key")
+
+              S3Utils.saveToS3(pdfBytes, s3Key).attempt.flatMap {
+                case Right(_) =>
+                  logger.info(
+                    s"Successfully processed request for envelope: ${webhookData.data.envelopeId}"
+                  )
+                  Ok(webhookData)
+                case Left(error) =>
+                  logger.error("Error saving to S3", error)
+                  InternalServerError(
+                    Json.obj("error" -> Json.fromString(error.getMessage))
+                  )
+              }
+
+            case Left(error) =>
+              logger.error("Error parsing webhook data", error)
+              BadRequest(Json.obj("error" -> Json.fromString(error.getMessage)))
+
           }
-          logger.info("=== DOCUSIGN PAYLOAD END ===")
         }
-        
-        webhookData <- req.as[DocuSignWebhook]
-        _ = logger.info(
-          s"Parsed webhook data - EnvelopeId: ${webhookData.data.envelopeId}"
-        )
-        pdfBytesBase64 =
-          webhookData.data.envelopeSummary.envelopeDocuments.head.PDFBytes
-        pdfBytes = java.util.Base64.getDecoder.decode(pdfBytesBase64)
-        s3Key = generateS3Key(webhookData.data.envelopeId)
-        _ = logger.info(s"Generated S3 key: $s3Key")
-        _ <- S3Utils.saveToS3(pdfBytes, s3Key)
-      } yield webhookData).attempt.flatMap {
-        case Right(data) =>
-          logger.info(
-            s"Successfully processed request for envelope: ${data.data.envelopeId}"
-          )
-          Ok(data)
-        case Left(error) =>
-          logger.error("Error processing request", error)
-          InternalServerError(
-            Json.obj("error" -> Json.fromString(error.getMessage))
-          )
-      }
+
     case GET -> Root / "health-check" =>
       logger.info("Received GET request to /health-check")
       val healthStatus = Json.obj(
