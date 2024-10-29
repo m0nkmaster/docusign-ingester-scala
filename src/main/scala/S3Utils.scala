@@ -1,20 +1,30 @@
 import cats.effect.IO
-import software.amazon.awssdk.services.s3.S3Client
+import software.amazon.awssdk.auth.credentials.{AwsBasicCredentials, StaticCredentialsProvider}
+import software.amazon.awssdk.core.sync.RequestBody
+import software.amazon.awssdk.regions.Region
+import software.amazon.awssdk.services.s3.{S3Client, S3ClientBuilder}
 import software.amazon.awssdk.services.s3.model.PutObjectRequest
-import java.nio.file.Paths
+import software.amazon.awssdk.http.apache.ApacheHttpClient
 
 object S3Utils {
-  val client: S3Client = S3Client.builder().build()
+  private val accessKeyId = sys.env("AWS_ACCESS_KEY_ID")
+  private val secretAccessKey = sys.env("AWS_SECRET_ACCESS_KEY")
+  private val region = sys.env("AWS_REGION")
 
-  def saveToS3(pdfBlob: Array[Byte], key: String): IO[Unit] = IO {
-  val request = PutObjectRequest.builder()
-    .bucket("docusign-pdfs-databonds")
-    .key(key)
+  private val credentials = AwsBasicCredentials.create(accessKeyId, secretAccessKey)
+  private val client: S3Client = S3Client.builder()
+    .credentialsProvider(StaticCredentialsProvider.create(credentials))
+    .httpClient(ApacheHttpClient.builder().build())
+    .region(Region.of(region))
     .build()
 
+  def saveToS3(pdfBlob: Array[Byte], key: String): IO[Unit] = IO {
+    val request = PutObjectRequest.builder()
+      .bucket("docusign-pdfs-databonds")
+      .key(key)
+      .contentType("application/pdf")
+      .build()
 
-    // You may want to write the blob to a temporary file, or use streams depending on the size
-    // This example assumes you have saved the blob to a path
-    client.putObject(request, Paths.get("/path/to/pdf"))
+    client.putObject(request, RequestBody.fromBytes(pdfBlob))
   }
 }
