@@ -17,8 +17,7 @@ lazy val root = (project in file("."))
       "com.amazonaws" % "aws-java-sdk-s3" % "1.12.100",
      //  "io.github.cdimascio" % "java-dotenv" % "5.2.2",
       "software.amazon.awssdk" % "apache-client" % "2.20.68",
-      "ch.qos.logback" % "logback-classic" % "1.4.7"
-    )
+      "ch.qos.logback" % "logback-classic" % "1.2.11"    )
   )
 
 assembly / assemblyJarName := "docusign-ingester-assembly.jar"
