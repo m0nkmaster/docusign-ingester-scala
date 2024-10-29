@@ -45,3 +45,6 @@ metals.sbt
 
 # Environment variables
 .env
+
+# Terraform
+.terraform/
