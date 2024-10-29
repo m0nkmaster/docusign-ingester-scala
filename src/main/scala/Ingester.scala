@@ -25,9 +25,12 @@ object Ingester {
       logger.info("Received POST request to /ingest")
       (for {
         body <- req.bodyText.compile.string
-        _ = logger.info(s"Request body: $body")
+        _ = logger.info(s"Raw request body: $body")
+        _ = logger.info(s"Request headers: ${req.headers}")
         webhookData <- req.as[DocuSignWebhook]
-        _ = logger.info(s"Parsed webhook data - EnvelopeId: ${webhookData.data.envelopeId}")
+        _ = logger.info(
+          s"Parsed webhook data - EnvelopeId: ${webhookData.data.envelopeId}"
+        )
         pdfBytesBase64 =
           webhookData.data.envelopeSummary.envelopeDocuments.head.PDFBytes
         pdfBytes = java.util.Base64.getDecoder.decode(pdfBytesBase64)
@@ -36,7 +39,9 @@ object Ingester {
         _ <- S3Utils.saveToS3(pdfBytes, s3Key)
       } yield webhookData).attempt.flatMap {
         case Right(data) =>
-          logger.info(s"Successfully processed request for envelope: ${data.data.envelopeId}")
+          logger.info(
+            s"Successfully processed request for envelope: ${data.data.envelopeId}"
+          )
           Ok(data)
         case Left(error) =>
           logger.error("Error processing request", error)
@@ -59,3 +64,4 @@ object Ingester {
     s"$field1-${System.currentTimeMillis}.pdf"
   }
 }
+
