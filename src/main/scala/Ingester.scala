@@ -24,15 +24,19 @@ object Ingester {
     case req @ POST -> Root / "ingest" =>
       logger.info("Received POST request to /ingest")
       (for {
+        body <- req.bodyText.compile.string
+        _ = logger.info(s"Request body: $body")
         webhookData <- req.as[DocuSignWebhook]
+        _ = logger.info(s"Parsed webhook data - EnvelopeId: ${webhookData.data.envelopeId}")
         pdfBytesBase64 =
           webhookData.data.envelopeSummary.envelopeDocuments.head.PDFBytes
         pdfBytes = java.util.Base64.getDecoder.decode(pdfBytesBase64)
         s3Key = generateS3Key(webhookData.data.envelopeId)
+        _ = logger.info(s"Generated S3 key: $s3Key")
         _ <- S3Utils.saveToS3(pdfBytes, s3Key)
       } yield webhookData).attempt.flatMap {
         case Right(data) =>
-          logger.info("Successfully processed request")
+          logger.info(s"Successfully processed request for envelope: ${data.data.envelopeId}")
           Ok(data)
         case Left(error) =>
           logger.error("Error processing request", error)
@@ -40,7 +44,6 @@ object Ingester {
             Json.obj("error" -> Json.fromString(error.getMessage))
           )
       }
-
     case GET -> Root / "health-check" =>
       logger.info("Received GET request to /health-check")
       val healthStatus = Json.obj(
