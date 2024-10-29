@@ -5,33 +5,43 @@ import io.circe.{Decoder, Encoder}
 
 case class DocuSignWebhook(
   event: String,
-  uri: String,
-  retryCount: String,
-  configurationId: String,
   apiVersion: String,
+  uri: String,
+  retryCount: Int,
+  configurationId: Long,
   generatedDateTime: String,
   data: WebhookData
 )
 
 case class WebhookData(
   accountId: String,
-  recipientId: String,
+  userId: String,
   envelopeId: String,
   envelopeSummary: EnvelopeSummary
 )
 
 case class EnvelopeSummary(
   status: String,
+  documentsUri: String,
+  recipientsUri: String,
+  attachmentsUri: String,
+  envelopeUri: String,
   emailSubject: String,
-  emailBlurb: String,
   signingLocation: String,
+  customFieldsUri: String,
+  notificationUri: String,
   enableWetSign: String,
   allowMarkup: String,
   allowReassign: String,
   createdDateTime: String,
   lastModifiedDateTime: String,
+  deliveredDateTime: String,
+  sentDateTime: String,
+  completedDateTime: String,
   statusChangedDateTime: String,
-  useDisclosure: String,
+  documentsCombinedUri: String,
+  certificateUri: String,
+  templatesUri: String,
   sender: DocuSignSender,
   recipients: Recipients,
   envelopeDocuments: List[DocuSignDocument],
@@ -42,21 +52,26 @@ case class DocuSignSender(
   userName: String,
   userId: String,
   accountId: String,
-  email: String
+  email: String,
+  ipAddress: String
 )
 
 case class Recipients(
-  signers: List[Signer]
+  signers: List[Signer],
+  recipientCount: String,
+  currentRoutingOrder: String
 )
 
 case class Signer(
-  recipientId: String,
   name: String,
   email: String,
+  recipientId: String,
+  recipientIdGuid: String,
   status: String,
   signedDateTime: String,
   deliveredDateTime: String,
-  recipientIPAddress: String
+  deliveryMethod: String,
+  recipientType: String
 )
 
 case class DocuSignDocument(
@@ -64,14 +79,23 @@ case class DocuSignDocument(
   documentIdGuid: String,
   name: String,
   `type`: String,
+  uri: String,
   order: String,
-  pages: String,
+  pages: List[DocumentPage],
   display: String,
   includeInDownload: String,
   signerMustAcknowledge: String,
   templateRequired: String,
-  authoritative: String,
-  PDFBytes: String // Assuming this is base64 encoded
+  authoritativeCopy: String,
+  PDFBytes: String
+)
+
+case class DocumentPage(
+  pageId: String,
+  sequence: String,
+  height: String,
+  width: String,
+  dpi: String
 )
 
 case class CustomFields(
@@ -80,7 +104,10 @@ case class CustomFields(
 
 case class TextCustomField(
   name: String,
-  value: String
+  value: String,
+  fieldId: String,
+  show: String,
+  required: String
 )
 
 object DocuSignWebhook {
@@ -116,6 +143,11 @@ object Signer {
 object DocuSignDocument {
   implicit val decoder: Decoder[DocuSignDocument] = deriveDecoder[DocuSignDocument]
   implicit val encoder: Encoder[DocuSignDocument] = deriveEncoder[DocuSignDocument]
+}
+
+object DocumentPage {
+  implicit val decoder: Decoder[DocumentPage] = deriveDecoder[DocumentPage]
+  implicit val encoder: Encoder[DocumentPage] = deriveEncoder[DocumentPage]
 }
 
 object CustomFields {
