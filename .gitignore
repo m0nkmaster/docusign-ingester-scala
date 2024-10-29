@@ -47,5 +47,6 @@ metals.sbt
 .env
 
 # Terraform
-.terraform/infrastructure/.terraform
 infrastructure/.terraform
+infrastructure/.terraform/
+infrastructure/.terraform.lock.hcl
