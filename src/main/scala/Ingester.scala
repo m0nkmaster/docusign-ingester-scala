@@ -80,9 +80,16 @@ object Ingester {
         "serverTime" -> Json.fromString(Instant.now().toString),
         "status" -> Json.fromString("healthy"),
         "version" -> Json.fromString(BuildInfo.version),
-        "buildDate" -> Json.fromString(BuildInfo.buildDate)
+        "buildDate" -> Json.fromString(BuildInfo.buildDate),
+        "awsRegion" -> Json.fromString(
+          sys.env.getOrElse("AWS_REGION", "not set")
+        ),
+        "awsKeyPrefix" -> Json.fromString(
+          sys.env.get("AWS_ACCESS_KEY_ID").map(_.take(4)).getOrElse("not set")
+        )
       )
       Ok(healthStatus)
+
   }
 
   def generateS3Key(field1: String): String = {
