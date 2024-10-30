@@ -14,11 +14,16 @@ object S3Utils {
   private val logger = LoggerFactory.getLogger(this.getClass)
 
   private val credentials = AwsBasicCredentials.create(accessKeyId, secretAccessKey)
-  private val client: S3Client = S3Client.builder()
+private val client: S3Client = S3Client.builder()
     .credentialsProvider(StaticCredentialsProvider.create(credentials))
-    .httpClient(ApacheHttpClient.builder().build())
+    .httpClient(ApacheHttpClient.builder()
+      .socketTimeout(java.time.Duration.ofMinutes(5))
+      .build())
     .region(Region.of(region))
+    .endpointOverride(java.net.URI.create(s"https://s3.${region}.amazonaws.com"))
+    .forcePathStyle(true)
     .build()
+
 
   def saveToS3(pdfBlob: Array[Byte], key: String): IO[Unit] = IO {
     logger.info(s"Starting S3 upload - bucket: docusign-pdfs-databonds, key: $key")
