@@ -68,8 +68,18 @@ object Ingester {
               }
 
             case Left(error) =>
-              logger.error("Error parsing webhook data", error)
-              BadRequest(Json.obj("error" -> Json.fromString(error.getMessage)))
+              logger.error("Error parsing webhook data")
+              logger.error(s"Raw body content: $body")
+              logger.error(s"Error message: ${Option(error.getMessage).getOrElse("No message available")}")
+              logger.error(s"Error type: ${error.getClass.getName}")
+              logger.error(s"Stack trace: ${error.getStackTrace.mkString("\n")}")
+              logger.error(s"Cause: ${Option(error.getCause).map(_.getMessage).getOrElse("No cause available")}")
+              
+              BadRequest(Json.obj(
+                "error" -> Json.fromString(Option(error.getMessage).getOrElse("Unknown error occurred")),
+                "errorType" -> Json.fromString(error.getClass.getName),
+                "errorDetails" -> Json.fromString(Option(error.getCause).map(_.getMessage).getOrElse("No additional details"))
+              ))
 
           }
         }
@@ -83,9 +93,6 @@ object Ingester {
         "buildDate" -> Json.fromString(BuildInfo.buildDate),
         "awsRegion" -> Json.fromString(
           sys.env.getOrElse("AWS_REGION", "not set")
-        ),
-        "awsKeyPrefix" -> Json.fromString(
-          sys.env.get("AWS_ACCESS_KEY_ID").map(_.take(4)).getOrElse("not set")
         )
       )
       Ok(healthStatus)
