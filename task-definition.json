@@ -1,0 +1,4 @@
+{
+    "networkMode": "awsvpc",
+    "requiresCompatibilities": ["FARGATE"]
+}

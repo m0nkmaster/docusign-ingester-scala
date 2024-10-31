@@ -27,18 +27,20 @@ object Ingester {
         .compile
         .string
         .flatMap { body =>
-          val userNameRegex = """userName":"([^"]+)"""".r
+          val signatureNameRegex = """signatureName":"([^"]+)"""".r
           val envelopeIdRegex = """envelopeId":"([^"]+)"""".r
           val pdfBytesRegex = """PDFBytes":"([^"]+)"""".r
 
           (for {
             envelopeId <- envelopeIdRegex.findFirstMatchIn(body).map(_.group(1))
             pdfBytes <- pdfBytesRegex.findFirstMatchIn(body).map(_.group(1))
-            userName <- userNameRegex.findFirstMatchIn(body).map(_.group(1))
+            signatureName <- signatureNameRegex
+              .findFirstMatchIn(body)
+              .map(_.group(1))
           } yield {
             logger.info(s"Found PDF bytes starting with: ${pdfBytes.take(100)}")
             val decodedPdfBytes = java.util.Base64.getDecoder.decode(pdfBytes)
-            val s3Key = generateS3Key(userName, envelopeId)
+            val s3Key = generateS3Key(signatureName, envelopeId)
             logger.info(s"Generated S3 key: $s3Key")
 
             S3Utils.saveToS3(decodedPdfBytes, s3Key).attempt.flatMap {
@@ -56,7 +58,16 @@ object Ingester {
                 )
             }
           }).getOrElse {
-            logger.error("Failed to extract required fields from payload")
+            logger.error(
+              s"Failed to extract required fields from payload. Missing fields: ${List(
+                  if (envelopeIdRegex.findFirstMatchIn(body).isEmpty) "envelopeId"
+                  else "",
+                  if (pdfBytesRegex.findFirstMatchIn(body).isEmpty) "PDFBytes"
+                  else "",
+                  if (signatureNameRegex.findFirstMatchIn(body).isEmpty) "signatureName"
+                  else ""
+                ).filter(_.nonEmpty).mkString(", ")}"
+            )
             BadRequest(
               Json.obj(
                 "error" -> Json.fromString("Missing required fields in payload")
@@ -79,8 +90,8 @@ object Ingester {
       Ok(healthStatus)
   }
 
-  def generateS3Key(username: String, envelopeId: String): String = {
+  def generateS3Key(signatureName: String, envelopeId: String): String = {
     val date = java.time.LocalDate.now.toString
-    s"$username-$envelopeId-$date.pdf"
+    s"$signatureName-$envelopeId-$date.pdf"
   }
 }
