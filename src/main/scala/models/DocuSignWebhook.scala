@@ -5,7 +5,7 @@ case class DocuSignWebhook(
   apiVersion: String,
   uri: String,
   retryCount: Int,
-  configurationId: Long,
+  configurationId: Int,
   generatedDateTime: String,
   data: WebhookData
 )

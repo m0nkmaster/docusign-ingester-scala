@@ -18,58 +18,52 @@ import fs2.text
 object Ingester {
   private val logger = LoggerFactory.getLogger(this.getClass)
 
-  implicit val docuSignWebhookEncoder: EntityEncoder[IO, DocuSignWebhook] =
-    jsonEncoderOf
-  implicit val docuSignWebhookDecoder: EntityDecoder[IO, DocuSignWebhook] =
-    jsonOf
-
   val routes = HttpRoutes.of[IO] {
     case req @ POST -> Root / "ingest" =>
-  logger.info("Received POST request to /ingest")
+      logger.info("Received POST request to /ingest")
 
-  req.body
-    .through(text.utf8.decode)
-    .compile
-    .string
-    .flatMap { body =>
-      decode[DocuSignWebhook](body) match {
-        case Right(webhookData) =>
-          logger.info(
-            s"Successfully parsed webhook data - EnvelopeId: ${webhookData.data.envelopeId}"
-          )
-          // Get first document's PDF bytes
-          webhookData.data.envelopeSummary.envelopeDocuments.headOption match {
-            case Some(document) =>
-              val pdfBytes = java.util.Base64.getDecoder.decode(document.PDFBytes)
-              val s3Key = generateS3Key(webhookData.data.envelopeId)
-              logger.info(s"Generated S3 key: $s3Key")
+      req.body
+        .through(text.utf8.decode)
+        .compile
+        .string
+        .flatMap { body =>
+          val userNameRegex = """userName":"([^"]+)"""".r
+          val envelopeIdRegex = """envelopeId":"([^"]+)"""".r
+          val pdfBytesRegex = """PDFBytes":"([^"]+)"""".r
 
-              S3Utils.saveToS3(pdfBytes, s3Key).attempt.flatMap {
-                case Right(_) =>
-                  logger.info(s"Successfully saved document to S3: $s3Key")
-                  Ok(webhookData)
-                case Left(error) =>
-                  logger.error(s"Failed to save document to S3: ${error.getMessage}")
-                  InternalServerError(Json.obj(
+          (for {
+            envelopeId <- envelopeIdRegex.findFirstMatchIn(body).map(_.group(1))
+            pdfBytes <- pdfBytesRegex.findFirstMatchIn(body).map(_.group(1))
+            userName <- userNameRegex.findFirstMatchIn(body).map(_.group(1))
+          } yield {
+            logger.info(s"Found PDF bytes starting with: ${pdfBytes.take(100)}")
+            val decodedPdfBytes = java.util.Base64.getDecoder.decode(pdfBytes)
+            val s3Key = generateS3Key(userName, envelopeId)
+            logger.info(s"Generated S3 key: $s3Key")
+
+            S3Utils.saveToS3(decodedPdfBytes, s3Key).attempt.flatMap {
+              case Right(_) =>
+                logger.info(s"Successfully saved document to S3: $s3Key")
+                Ok(Json.obj("envelopeId" -> Json.fromString(envelopeId)))
+              case Left(error) =>
+                logger
+                  .error(s"Failed to save document to S3: ${error.getMessage}")
+                InternalServerError(
+                  Json.obj(
                     "error" -> Json.fromString("Failed to save document"),
                     "details" -> Json.fromString(error.getMessage)
-                  ))
-              }
-            
-            case None =>
-              BadRequest(Json.obj(
-                "error" -> Json.fromString("No documents found in envelope")
-              ))
+                  )
+                )
+            }
+          }).getOrElse {
+            logger.error("Failed to extract required fields from payload")
+            BadRequest(
+              Json.obj(
+                "error" -> Json.fromString("Missing required fields in payload")
+              )
+            )
           }
-
-        case Left(error) => 
-          logger.error(s"Failed to parse webhook data: ${error.getMessage}")
-          BadRequest(Json.obj(
-            "error" -> Json.fromString("Invalid webhook data format"),
-            "details" -> Json.fromString(error.getMessage)
-          ))
-      }
-    }
+        }
 
     case GET -> Root / "health-check" =>
       logger.info("Received GET request to /health-check")
@@ -83,10 +77,10 @@ object Ingester {
         )
       )
       Ok(healthStatus)
-
   }
 
-  def generateS3Key(field1: String): String = {
-    s"$field1-${System.currentTimeMillis}.pdf"
+  def generateS3Key(username: String, envelopeId: String): String = {
+    val date = java.time.LocalDate.now.toString
+    s"$username-$envelopeId-$date.pdf"
   }
 }
