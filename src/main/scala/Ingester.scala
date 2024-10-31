@@ -25,64 +25,51 @@ object Ingester {
 
   val routes = HttpRoutes.of[IO] {
     case req @ POST -> Root / "ingest" =>
-      logger.info("Received POST request to /ingest")
+  logger.info("Received POST request to /ingest")
 
-      req.body
-        .through(text.utf8.decode)
-        .compile
-        .string
-        .flatMap { body =>
-          decode[DocuSignWebhook](body) match {
-            case Right(webhookData) =>
-              logger.info(
-                s"Successfully parsed webhook data - EnvelopeId: ${webhookData.data.envelopeId}"
-              )
-              val pdfBytesBase64 =
-                webhookData.data.envelopeSummary.envelopeDocuments.head.PDFBytes
-              val pdfBytes = java.util.Base64.getDecoder.decode(pdfBytesBase64)
+  req.body
+    .through(text.utf8.decode)
+    .compile
+    .string
+    .flatMap { body =>
+      decode[DocuSignWebhook](body) match {
+        case Right(webhookData) =>
+          logger.info(
+            s"Successfully parsed webhook data - EnvelopeId: ${webhookData.data.envelopeId}"
+          )
+          // Get first document's PDF bytes
+          webhookData.data.envelopeSummary.envelopeDocuments.headOption match {
+            case Some(document) =>
+              val pdfBytes = java.util.Base64.getDecoder.decode(document.PDFBytes)
               val s3Key = generateS3Key(webhookData.data.envelopeId)
               logger.info(s"Generated S3 key: $s3Key")
 
               S3Utils.saveToS3(pdfBytes, s3Key).attempt.flatMap {
                 case Right(_) =>
-                  logger.info(
-                    s"Successfully processed request for envelope: ${webhookData.data.envelopeId}"
-                  )
+                  logger.info(s"Successfully saved document to S3: $s3Key")
                   Ok(webhookData)
                 case Left(error) =>
-                  logger.error(
-                    s"Error parsing webhook data: ${error.getMessage}",
-                    error
-                  )
-                  logger.error(s"Error details: ${error.getClass.getName}")
-                  logger.error(
-                    s"Stack trace: ${error.getStackTrace.mkString("\n")}"
-                  )
-                  BadRequest(
-                    Json.obj(
-                      "error" -> Json.fromString(error.getMessage),
-                      "errorType" -> Json.fromString(error.getClass.getName)
-                    )
-                  )
-
+                  logger.error(s"Failed to save document to S3: ${error.getMessage}")
+                  InternalServerError(Json.obj(
+                    "error" -> Json.fromString("Failed to save document"),
+                    "details" -> Json.fromString(error.getMessage)
+                  ))
               }
-
-            case Left(error) =>
-              logger.error("Error parsing webhook data")
-              logger.error(s"Raw body content: $body")
-              logger.error(s"Error message: ${Option(error.getMessage).getOrElse("No message available")}")
-              logger.error(s"Error type: ${error.getClass.getName}")
-              logger.error(s"Stack trace: ${error.getStackTrace.mkString("\n")}")
-              logger.error(s"Cause: ${Option(error.getCause).map(_.getMessage).getOrElse("No cause available")}")
-              
+            
+            case None =>
               BadRequest(Json.obj(
-                "error" -> Json.fromString(Option(error.getMessage).getOrElse("Unknown error occurred")),
-                "errorType" -> Json.fromString(error.getClass.getName),
-                "errorDetails" -> Json.fromString(Option(error.getCause).map(_.getMessage).getOrElse("No additional details"))
+                "error" -> Json.fromString("No documents found in envelope")
               ))
-
           }
-        }
+
+        case Left(error) => 
+          logger.error(s"Failed to parse webhook data: ${error.getMessage}")
+          BadRequest(Json.obj(
+            "error" -> Json.fromString("Invalid webhook data format"),
+            "details" -> Json.fromString(error.getMessage)
+          ))
+      }
+    }
 
     case GET -> Root / "health-check" =>
       logger.info("Received GET request to /health-check")

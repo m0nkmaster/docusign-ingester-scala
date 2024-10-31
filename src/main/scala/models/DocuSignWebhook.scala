@@ -1,8 +1,5 @@
 package models
 
-import io.circe.generic.semiauto._
-import io.circe.{Decoder, Encoder}
-
 case class DocuSignWebhook(
   event: String,
   apiVersion: String,
@@ -27,6 +24,7 @@ case class EnvelopeSummary(
   attachmentsUri: String,
   envelopeUri: String,
   emailSubject: String,
+  envelopeId: String,
   signingLocation: String,
   customFieldsUri: String,
   notificationUri: String,
@@ -36,19 +34,23 @@ case class EnvelopeSummary(
   createdDateTime: String,
   lastModifiedDateTime: String,
   deliveredDateTime: String,
+  initialSentDateTime: String,
   sentDateTime: String,
   completedDateTime: String,
   statusChangedDateTime: String,
   documentsCombinedUri: String,
   certificateUri: String,
   templatesUri: String,
-  sender: DocuSignSender,
+  expireEnabled: String,
+  expireDateTime: String,
+  expireAfter: String,
+  sender: Sender,
+  customFields: CustomFields,
   recipients: Recipients,
-  envelopeDocuments: List[DocuSignDocument],
-  customFields: CustomFields
+  envelopeDocuments: List[EnvelopeDocument]
 )
 
-case class DocuSignSender(
+case class Sender(
   userName: String,
   userId: String,
   accountId: String,
@@ -56,32 +58,189 @@ case class DocuSignSender(
   ipAddress: String
 )
 
+case class CustomFields(
+  textCustomFields: List[TextCustomField],
+  listCustomFields: List[String]
+)
+
+case class TextCustomField(
+  fieldId: String,
+  name: String,
+  show: String,
+  required: String,
+  value: String
+)
+
 case class Recipients(
   signers: List[Signer],
+  agents: List[String],
+  editors: List[String],
+  intermediaries: List[String],
+  carbonCopies: List[String],
+  certifiedDeliveries: List[String],
+  inPersonSigners: List[String],
+  seals: List[String],
+  witnesses: List[String],
+  notaries: List[String],
   recipientCount: String,
   currentRoutingOrder: String
 )
 
 case class Signer(
+  signatureInfo: SignatureInfo,
+  tabs: Tabs,
+  creationReason: String,
+  isBulkRecipient: String,
+  requireUploadSignature: String,
   name: String,
+  firstName: String,
+  lastName: String,
   email: String,
   recipientId: String,
   recipientIdGuid: String,
+  requireIdLookup: String,
+  userId: String,
+  clientUserId: String,
+  routingOrder: String,
+  note: String,
+  roleName: String,
   status: String,
+  completedCount: String,
   signedDateTime: String,
   deliveredDateTime: String,
+  sentDateTime: String,
   deliveryMethod: String,
+  totalTabCount: String,
   recipientType: String
 )
 
-case class DocuSignDocument(
+case class SignatureInfo(
+  signatureName: String,
+  signatureInitials: String,
+  fontStyle: String
+)
+
+case class Tabs(
+  signHereTabs: List[SignHereTab],
+  fullNameTabs: List[FullNameTab],
+  dateSignedTabs: List[DateSignedTab],
+  textTabs: List[TextTab],
+  emailAddressTabs: List[EmailAddressTab]
+)
+
+case class SignHereTab(
+  stampType: String,
+  name: String,
+  tabLabel: String,
+  scaleValue: String,
+  optional: String,
+  documentId: String,
+  recipientId: String,
+  pageNumber: String,
+  xPosition: String,
+  yPosition: String,
+  tabId: String,
+  templateRequired: String,
+  status: String,
+  tabType: String,
+  tooltip: String,
+  agreementAttributeLocked: String
+)
+
+case class FullNameTab(
+  name: String,
+  value: String,
+  tabLabel: String,
+  font: String,
+  fontColor: String,
+  fontSize: String,
+  documentId: String,
+  recipientId: String,
+  pageNumber: String,
+  xPosition: String,
+  yPosition: String,
+  width: String,
+  height: String,
+  tabId: String,
+  templateRequired: String,
+  tabType: String,
+  tooltip: String,
+  agreementAttributeLocked: String
+)
+
+case class DateSignedTab(
+  name: String,
+  value: String,
+  tabLabel: String,
+  font: String,
+  fontColor: String,
+  fontSize: String,
+  documentId: String,
+  recipientId: String,
+  pageNumber: String,
+  xPosition: String,
+  yPosition: String,
+  width: String,
+  height: String,
+  tabId: String,
+  templateRequired: String,
+  tabType: String,
+  agreementAttributeLocked: String
+)
+
+case class TextTab(
+  value: String,
+  originalValue: String,
+  required: String,
+  locked: String,
+  concealValueOnDocument: String,
+  disableAutoSize: String,
+  maxLength: String,
+  tabLabel: String,
+  font: String,
+  fontColor: String,
+  fontSize: String,
+  documentId: String,
+  recipientId: String,
+  pageNumber: String,
+  xPosition: String,
+  yPosition: String,
+  width: String,
+  height: String,
+  tabId: String,
+  templateRequired: String,
+  tabType: String
+)
+
+case class EmailAddressTab(
+  name: String,
+  value: String,
+  tabLabel: String,
+  font: String,
+  fontColor: String,
+  fontSize: String,
+  documentId: String,
+  recipientId: String,
+  pageNumber: String,
+  xPosition: String,
+  yPosition: String,
+  width: String,
+  height: String,
+  tabId: String,
+  templateRequired: String,
+  tabType: String,
+  tooltip: String,
+  agreementAttributeLocked: String
+)
+
+case class EnvelopeDocument(
   documentId: String,
   documentIdGuid: String,
   name: String,
   `type`: String,
   uri: String,
   order: String,
-  pages: List[DocumentPage],
+  pages: List[Page],
   display: String,
   includeInDownload: String,
   signerMustAcknowledge: String,
@@ -90,72 +249,10 @@ case class DocuSignDocument(
   PDFBytes: String
 )
 
-case class DocumentPage(
+case class Page(
   pageId: String,
   sequence: String,
   height: String,
   width: String,
   dpi: String
 )
-
-case class CustomFields(
-  textCustomFields: List[TextCustomField]
-)
-
-case class TextCustomField(
-  name: String,
-  value: String,
-  fieldId: String,
-  show: String,
-  required: String
-)
-
-object DocuSignWebhook {
-  implicit val decoder: Decoder[DocuSignWebhook] = deriveDecoder[DocuSignWebhook]
-  implicit val encoder: Encoder[DocuSignWebhook] = deriveEncoder[DocuSignWebhook]
-}
-
-object WebhookData {
-  implicit val decoder: Decoder[WebhookData] = deriveDecoder[WebhookData]
-  implicit val encoder: Encoder[WebhookData] = deriveEncoder[WebhookData]
-}
-
-object EnvelopeSummary {
-  implicit val decoder: Decoder[EnvelopeSummary] = deriveDecoder[EnvelopeSummary]
-  implicit val encoder: Encoder[EnvelopeSummary] = deriveEncoder[EnvelopeSummary]
-}
-
-object DocuSignSender {
-  implicit val decoder: Decoder[DocuSignSender] = deriveDecoder[DocuSignSender]
-  implicit val encoder: Encoder[DocuSignSender] = deriveEncoder[DocuSignSender]
-}
-
-object Recipients {
-  implicit val decoder: Decoder[Recipients] = deriveDecoder[Recipients]
-  implicit val encoder: Encoder[Recipients] = deriveEncoder[Recipients]
-}
-
-object Signer {
-  implicit val decoder: Decoder[Signer] = deriveDecoder[Signer]
-  implicit val encoder: Encoder[Signer] = deriveEncoder[Signer]
-}
-
-object DocuSignDocument {
-  implicit val decoder: Decoder[DocuSignDocument] = deriveDecoder[DocuSignDocument]
-  implicit val encoder: Encoder[DocuSignDocument] = deriveEncoder[DocuSignDocument]
-}
-
-object DocumentPage {
-  implicit val decoder: Decoder[DocumentPage] = deriveDecoder[DocumentPage]
-  implicit val encoder: Encoder[DocumentPage] = deriveEncoder[DocumentPage]
-}
-
-object CustomFields {
-  implicit val decoder: Decoder[CustomFields] = deriveDecoder[CustomFields]
-  implicit val encoder: Encoder[CustomFields] = deriveEncoder[CustomFields]
-}
-
-object TextCustomField {
-  implicit val decoder: Decoder[TextCustomField] = deriveDecoder[TextCustomField]
-  implicit val encoder: Encoder[TextCustomField] = deriveEncoder[TextCustomField]
-}
