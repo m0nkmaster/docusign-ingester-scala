@@ -1,18 +1,11 @@
 import cats.effect.IO
 import org.http4s.HttpRoutes
 import org.http4s.dsl.io._
-import io.circe.generic.auto._
 import org.http4s.circe._
-import io.circe.syntax._
 import io.circe.Json
 import java.time.Instant
-import org.http4s.EntityDecoder
-import org.http4s.EntityEncoder
-import org.http4s.circe.jsonEncoderOf
 import models._
 import org.slf4j.LoggerFactory
-import fs2.Stream
-import io.circe.parser.decode
 import fs2.text
 
 object Ingester {
