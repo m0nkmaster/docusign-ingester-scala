@@ -46,6 +46,9 @@ metals.sbt
 # Environment variables
 .env
 
+# Private
+private/
+
 # Terraform
 infrastructure/.terraform
 infrastructure/.terraform/
