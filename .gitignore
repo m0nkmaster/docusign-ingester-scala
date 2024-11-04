@@ -48,6 +48,7 @@ metals.sbt
 
 # Private
 private/
+*.pem
 
 # Terraform
 infrastructure/.terraform
