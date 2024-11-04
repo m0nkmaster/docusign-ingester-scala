@@ -17,7 +17,6 @@ import fs2.text
 
 object Ingester {
   private val logger = LoggerFactory.getLogger(this.getClass)
-
   val routes = HttpRoutes.of[IO] {
     case req @ POST -> Root / "ingest" =>
       logger.info("Received POST request to /ingest")
@@ -78,6 +77,9 @@ object Ingester {
 
     case GET -> Root / "health-check" =>
       logger.info("Received GET request to /health-check")
+      val runtime = Runtime.getRuntime
+      val usedMemory = runtime.totalMemory() - runtime.freeMemory()
+
       val healthStatus = Json.obj(
         "serverTime" -> Json.fromString(Instant.now().toString),
         "status" -> Json.fromString("healthy"),
@@ -85,6 +87,17 @@ object Ingester {
         "buildDate" -> Json.fromString(BuildInfo.buildDate),
         "awsRegion" -> Json.fromString(
           sys.env.getOrElse("AWS_REGION", "not set")
+        ),
+        "system" -> Json.obj(
+          "availableProcessors" -> Json.fromInt(runtime.availableProcessors()),
+          "totalMemoryMB" -> Json.fromLong(
+            runtime.totalMemory() / (1024 * 1024)
+          ),
+          "freeMemoryMB" -> Json.fromLong(runtime.freeMemory() / (1024 * 1024)),
+          "usedMemoryMB" -> Json.fromLong(usedMemory / (1024 * 1024)),
+          "memoryUtilizationPct" -> Json
+            .fromDouble(usedMemory.toDouble / runtime.totalMemory() * 100)
+            .get
         )
       )
       Ok(healthStatus)

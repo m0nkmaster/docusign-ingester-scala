@@ -1,5 +1,8 @@
 import cats.effect.IO
-import software.amazon.awssdk.auth.credentials.{AwsBasicCredentials, StaticCredentialsProvider}
+import software.amazon.awssdk.auth.credentials.{
+  AwsBasicCredentials,
+  StaticCredentialsProvider
+}
 import software.amazon.awssdk.core.sync.RequestBody
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.{S3Client, S3ClientBuilder}
@@ -13,24 +16,33 @@ object S3Utils {
   private val region = sys.env("AWS_REGION")
   private val logger = LoggerFactory.getLogger(this.getClass)
 
-  private val credentials = AwsBasicCredentials.create(accessKeyId, secretAccessKey)
-private val client: S3Client = S3Client.builder()
+  private val credentials =
+    AwsBasicCredentials.create(accessKeyId, secretAccessKey)
+  private val client: S3Client = S3Client
+    .builder()
     .credentialsProvider(StaticCredentialsProvider.create(credentials))
-    .httpClient(ApacheHttpClient.builder()
-      .socketTimeout(java.time.Duration.ofMinutes(5))
-      .build())
+    .httpClient(
+      ApacheHttpClient
+        .builder()
+        .socketTimeout(java.time.Duration.ofMinutes(5))
+        .build()
+    )
     .region(Region.of(region))
-    .endpointOverride(java.net.URI.create(s"https://s3.${region}.amazonaws.com"))
+    .endpointOverride(
+      java.net.URI.create(s"https://s3.${region}.amazonaws.com")
+    )
     .forcePathStyle(true)
     .build()
 
-
   def saveToS3(pdfBlob: Array[Byte], key: String): IO[Unit] = IO {
-    logger.info(s"Starting S3 upload - bucket: docusign-pdfs-databonds, key: $key")
+    logger.info(
+      s"Starting S3 upload - bucket: docusign-pdfs-databonds, key: $key"
+    )
     logger.info(s"Using AWS Region: $region")
-    
+
     try {
-      val request = PutObjectRequest.builder()
+      val request = PutObjectRequest
+        .builder()
         .bucket("docusign-pdfs-databonds")
         .key(key)
         .contentType("application/pdf")
@@ -44,6 +56,6 @@ private val client: S3Client = S3Client.builder()
         logger.error(s"Full error details: ${e.toString}")
         throw e
     }
-}
+  }
 
 }
